@@ -1,48 +1,118 @@
-const fetchData = async(searchTerm) => {
+const autoCompleteConfig = {
+    renderOption(movie) {
+        const imgSrc = movie.Poster ==='N/A' ? '' : movie.Poster;
+        return `
+        <img src="${imgSrc}" />
+        ${movie.Title} (${movie.Year})
+        `;
+    },
+
+    inputValue(movie) {
+        return movie.Title; 
+    },
+    async fetchData(searchTerm)  {
+        const response = await axios.get('http://www.omdbapi.com/',  {
+            params: {
+                apikey: 'cfd9b6db',
+                s: searchTerm
+            }
+        });
+        if (response.data.Error) {
+            console.log("ERROR");
+            return [];
+        }
+        return response.data.Search;
+    }
+}
+
+createAutoComplete( { 
+    ...autoCompleteConfig,
+    root: document.querySelector('#left-autocomplete'),
+    onOptionSelect(movie) {
+        document.querySelector('.tutorial').classList.add('is-hidden');
+        onMovieSelect(movie, document.querySelector('#left-summary'), 'left');
+    }
+
+});
+
+createAutoComplete( { 
+    ...autoCompleteConfig,
+    root: document.querySelector('#right-autocomplete'),
+    onOptionSelect(movie) {
+        document.querySelector('.tutorial').classList.add('is-hidden');
+        onMovieSelect(movie, document.querySelector('#right-summary'), 'right');
+    }
+
+});
+
+let leftMovie;
+let rightMovie;
+
+const onMovieSelect = async (movie, summaryElement, side) => {
     const response = await axios.get('http://www.omdbapi.com/',  {
         params: {
             apikey: 'cfd9b6db',
-            s: searchTerm
+            i: movie.imdbID
         }
     });
-    if (response.data.Error) {
-        console.log("ERROR");
-        return [];
+    summaryElement.innerHTML = movieTemplate(response.data);
+    // if (response.data.Error) {
+    if (side ==='left'){
+        leftMovie = response.data;
+    } else {
+        rightMovie = response.data;
     }
-    return response.data.Search;
-};
-
-const root = document.querySelector('.autocomplete');
-root.innerHTML = `
-    <label><b>Search For a Movie</b></label>
-    <input class='input' />
-    <div class="dropdown">
-      <div class="dropdown-menu">
-       <div class="dropdown-content results"></div>
-      </div>
-    </div>
-`;
-
-const input = document.querySelector('input');
-const dropdown = document.querySelector('.dropdown');
-const resultWrapper = document.querySelector('.results');
-
-
-const onInput = async event => {
-    const movies = await fetchData(event.target.value);
-    resultWrapper.innerHTML = '';
-    dropdown.classList.add('is-active');
-    for (const movie of movies) {
-        const option = document.createElement('a');
-        const imgSrc = movie.Poster ==='N/A' ? '' : movie.Poster;
-
-        option.classList.add('dropdown-item');
-        option.innerHTML = `
-        <img src="${imgSrc}" />
-        ${movie.Title}
-        `;
-        resultWrapper.appendChild(option);
+    if (leftMovie && rightMovie) {
+        runComparison();
     }
-};
+    //     console.log("ERROR");
+    //     return [];
+    // }
+    // return response.data.Search;
+}
 
-input.addEventListener('input', debounce(onInput, 500));
+const runComparison = () => {
+
+}
+
+
+const movieTemplate = (movieDetail) => {
+    const dollars = parseInt(movieDetail.BoxOffice.replace(/\$/g, '').replace(/,/g, ''));
+    console.log(dollars);
+    return `
+    <article class="media">
+        <figure class="media-left">
+        <p class="image">
+            <img src="${movieDetail.Poster}" alt="">
+        </p>
+        </figure>
+        <div class="media-content">
+        <div class="content">
+            <h1>${movieDetail.Title}</h1>
+            <h4>${movieDetail.Title}</h4>
+            <p>${movieDetail.Plot}</p>
+        </div>
+        </div>
+    </article>
+    <article class="notification is-primary">
+        <p class="title">${movieDetail.Awards}</p>
+        <p class="subtitle">Awards</p>
+    </article>
+    <article class="notification is-primary">
+        <p class="title">${movieDetail.BoxOffice}</p>
+        <p class="subtitle">Box Office</p>
+    </article>
+    <article class="notification is-primary">
+        <p class="title">${movieDetail.Metascore}</p>
+        <p class="subtitle">Metascore</p>
+    </article>
+    <article class="notification is-primary">
+        <p class="title">${movieDetail.imdbRating}</p>
+        <p class="subtitle">IMDB Rating</p>
+    </article>
+    <article class="notification is-primary">
+        <p class="title">${movieDetail.imdbVotes}</p>
+        <p class="subtitle">IMDB Votes</p>
+    </article>
+    `;
+}
